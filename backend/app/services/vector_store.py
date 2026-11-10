@@ -54,10 +54,30 @@ class GeminiEmbeddings(Embeddings):
         return [value / norm for value in values]
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [
-            self._embed(text, "RETRIEVAL_DOCUMENT")
-            for text in texts
-        ]
+        results = []
+
+        for i in range(0, len(texts), 100):
+            batch = texts[i:i + 100]
+
+            response = self.client.models.embed_content(
+                model=self.model,
+                contents=batch,
+                config=types.EmbedContentConfig(
+                    task_type="RETRIEVAL_DOCUMENT",
+                    output_dimensionality=768,
+                ),
+            )
+
+            for embedding in response.embeddings:
+                values = embedding.values
+                norm = math.sqrt(sum(v * v for v in values))
+
+                if norm == 0:
+                    results.append(values)
+                else:
+                    results.append([v / norm for v in values])
+
+        return results
 
     def embed_query(self, text: str) -> list[float]:
         return self._embed(text, "RETRIEVAL_QUERY")
