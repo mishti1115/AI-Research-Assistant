@@ -1,11 +1,5 @@
 """
-LLM service — thin wrapper so the rest of the app doesn't care which
-provider (Ollama, OpenAI, or Gemini) is actually generating text.
-
-Defaults to Ollama: a fully local model server, so this works with zero
-API keys and zero cost. Install it from https://ollama.com, then:
-    ollama pull llama3.2
-    ollama serve   (usually starts automatically)
+LLM service supporting Ollama, OpenAI, and Gemini.
 """
 from __future__ import annotations
 
@@ -28,29 +22,44 @@ def _get_openai_client():
     return _client
 
 
-def generate(prompt: str, system: str | None = None, temperature: float = 0.2) -> str:
-    """
-    Generate a completion from the configured LLM provider.
+def _get_gemini_client():
+    from google import genai
 
-    Kept deliberately simple (single-turn, prompt-in/text-out) since all
-    conversational state and grounding is handled explicitly in the prompt
-    templates before it ever reaches this function.
-    """
+    global _client
+
+    if not settings.GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY is missing.")
+
+    if _client is None:
+        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+    return _client
+
+
+def generate(
+    prompt: str,
+    system: str | None = None,
+    temperature: float = 0.2
+) -> str:
+
     if settings.LLM_PROVIDER == "gemini":
         return _generate_gemini(prompt, system, temperature)
+
     if settings.LLM_PROVIDER == "openai":
         return _generate_openai(prompt, system, temperature)
+
     return _generate_ollama(prompt, system, temperature)
 
 
-def _generate_ollama(prompt: str, system: str | None, temperature: float) -> str:
-    """
-    Call a locally running Ollama server. No API key needed — this is the
-    free/offline path. Raises a clear, actionable error if Ollama isn't
-    running or the model hasn't been pulled yet.
-    """
+def _generate_ollama(
+    prompt: str,
+    system: str | None,
+    temperature: float
+) -> str:
+
     url = f"{settings.OLLAMA_BASE_URL}/api/generate"
     full_prompt = f"{system}\n\n{prompt}" if system else prompt
+
     try:
         response = requests.post(
             url,
@@ -62,27 +71,33 @@ def _generate_ollama(prompt: str, system: str | None, temperature: float) -> str
             },
             timeout=180,
         )
+
         response.raise_for_status()
         return response.json().get("response", "")
+
     except requests.exceptions.ConnectionError as exc:
         raise RuntimeError(
-            "Couldn't reach Ollama at "
-            f"{settings.OLLAMA_BASE_URL}. Is it running? Start it with `ollama serve`, "
-            f"and make sure you've pulled the model: `ollama pull {settings.OLLAMA_CHAT_MODEL}`."
+            f"Couldn't reach Ollama at {settings.OLLAMA_BASE_URL}."
         ) from exc
+
     except requests.exceptions.HTTPError as exc:
         logger.exception("Ollama generation failed")
-        raise RuntimeError(
-            f"Ollama returned an error. Make sure the model is pulled: "
-            f"`ollama pull {settings.OLLAMA_CHAT_MODEL}`."
-        ) from exc
+        raise RuntimeError("Ollama returned an error.") from exc
 
 
-def _generate_openai(prompt: str, system: str | None, temperature: float) -> str:
+def _generate_openai(
+    prompt: str,
+    system: str | None,
+    temperature: float
+) -> str:
+
     client = _get_openai_client()
+
     messages = []
+
     if system:
         messages.append({"role": "system", "content": system})
+
     messages.append({"role": "user", "content": prompt})
 
     try:
@@ -91,24 +106,36 @@ def _generate_openai(prompt: str, system: str | None, temperature: float) -> str
             messages=messages,
             temperature=temperature,
         )
+
         return response.choices[0].message.content or ""
+
     except Exception:
         logger.exception("OpenAI generation failed")
         raise
 
 
-def _generate_gemini(prompt: str, system: str | None, temperature: float) -> str:
-    import google.generativeai as genai
+def _generate_gemini(
+    prompt: str,
+    system: str | None,
+    temperature: float
+) -> str:
 
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(
-        settings.GEMINI_CHAT_MODEL, system_instruction=system
-    )
+    from google.genai import types
+
+    client = _get_gemini_client()
+
     try:
-        response = model.generate_content(
-            prompt, generation_config={"temperature": temperature}
+        response = client.models.generate_content(
+            model=settings.GEMINI_CHAT_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                temperature=temperature,
+            ),
         )
+
         return response.text or ""
+
     except Exception:
         logger.exception("Gemini generation failed")
         raise
