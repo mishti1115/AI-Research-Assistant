@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import shutil
 import math
+import time
 
 from google import genai
 from google.genai import types
@@ -45,7 +46,6 @@ class GeminiEmbeddings(Embeddings):
         )
 
         values = response.embeddings[0].values
-
         norm = math.sqrt(sum(value * value for value in values))
 
         if norm == 0:
@@ -55,9 +55,10 @@ class GeminiEmbeddings(Embeddings):
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         results = []
+        batch_size = 10
 
-        for i in range(0, len(texts), 100):
-            batch = texts[i:i + 100]
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
 
             response = self.client.models.embed_content(
                 model=self.model,
@@ -76,6 +77,9 @@ class GeminiEmbeddings(Embeddings):
                     results.append(values)
                 else:
                     results.append([v / norm for v in values])
+
+            if i + batch_size < len(texts):
+                time.sleep(8)
 
         return results
 
