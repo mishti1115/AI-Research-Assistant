@@ -1,0 +1,46 @@
+version: "3.9"
+
+# Fully free, fully local stack: Ollama serves the LLM, sentence-transformers
+# (inside the backend container) handles embeddings — no API keys, no cost.
+# For the cloud target described in the project brief (Vercel for frontend,
+# Render/AWS for backend), see DEPLOYMENT.md — note that Ollama needs a real
+# machine with enough RAM/CPU, so cloud deploys typically swap back to a
+# hosted LLM (OpenAI/Gemini) for the LLM_PROVIDER, while keeping the free
+# local embeddings either way.
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - backend_data:/app/app/data
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+  ollama_data:

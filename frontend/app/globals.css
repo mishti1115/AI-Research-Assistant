@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-ink-950 text-ink_text-light font-body antialiased;
+  background-image: radial-gradient(circle at 1px 1px, rgba(184, 158, 102, 0.05) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+html.light body {
+  @apply bg-parchment-50 text-ink_text-dark;
+  background-image: radial-gradient(circle at 1px 1px, rgba(150, 119, 63, 0.08) 1px, transparent 0);
+}
+
+::selection {
+  background: rgba(184, 158, 102, 0.35);
+}
+
+/* Hairline divider used throughout instead of heavy borders/cards */
+.hairline {
+  @apply border-ink-700;
+}
+html.light .hairline {
+  @apply border-parchment-200;
+}
+
+/* Custom scrollbar to match the reading-room feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(184, 158, 102, 0.25);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(184, 158, 102, 0.45);
+}
+
+/* Visible keyboard focus everywhere — accessibility floor */
+:focus-visible {
+  outline: 2px solid #B99356;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Citation "index tab" — the signature element: small library-style page tabs
+   that sit on retrieved source chunks, echoing tabbed bookmarks in a book. */
+.index-tab {
+  @apply relative pl-3 border-l-2 border-brass-500/60;
+}

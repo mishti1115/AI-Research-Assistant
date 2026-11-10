@@ -1,0 +1,29 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# PDF parsing
+pymupdf==1.24.10
+
+# RAG / LangChain
+langchain==0.3.1
+langchain-community==0.3.1
+langchain-text-splitters==0.3.0
+faiss-cpu==1.8.0.post1
+
+# Free local embeddings (sentence-transformers, runs on CPU, no API key)
+sentence-transformers==3.1.1
+
+# LLM providers
+requests==2.32.3
+# Ollama (default, free/local) talks over plain HTTP via `requests` above —
+# no extra package needed, just install Ollama itself: https://ollama.com
+#
+# Uncomment ONLY if you switch LLM_PROVIDER to a paid hosted option:
+# openai==1.51.0
+# google-generativeai==0.8.2
+
+# Utilities
+python-dotenv==1.0.1
